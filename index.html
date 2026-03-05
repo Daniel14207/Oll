@@ -124,23 +124,23 @@
   </div>
 
   <!-- ACTIVATION SCREEN -->
-  <div id="screen-activation" class="screen">
+  <div id="activationScreen" class="screen">
     <div class="card" style="width: 100%; max-width: 400px; text-align: center;">
       <h2>SECRET CODE</h2>
-      <input type="password" id="secret-code" placeholder="Enter code..." style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
+      <input type="password" id="secretCode" placeholder="Enter code..." style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
       <button id="btn-verify">VERIFY</button>
-      <p id="auth-msg" style="margin-top: 15px; font-weight: bold;"></p>
+      <p id="accessMessage" style="margin-top: 15px; font-weight: bold;"></p>
     </div>
   </div>
 
   <!-- LOADING SCREEN -->
   <div id="screen-loading" class="screen">
     <div class="radar"></div>
-    <h2 id="loading-text">LOADING VIRTUAL ANALYSIS ENGINE...</h2>
+    <h2 id="loadingText">LOADING VIRTUAL ANALYSIS ENGINE...</h2>
   </div>
 
   <!-- MAIN APP -->
-  <div id="screen-main" class="screen" style="display: none; padding: 40px 0; justify-content: flex-start;">
+  <div id="historiqueScreen" class="screen" style="display: none; padding: 40px 0; justify-content: flex-start;">
     <div class="container" style="width: 100%;">
       <h1>⚽ PRONOSTIC VITAL ⚽</h1>
       
@@ -163,7 +163,7 @@
 
       <!-- RESULTS -->
       <div id="results-container" style="display:none;">
-        <h2>⚽ RÉSULTATS DE L'ANALYSE</h2>
+        <h2>⚽ MATCH CIBLE</h2>
         <div id="matches-cible"></div>
         
         <h2 style="margin-top: 40px;">CHOIX 10 MULTIPLE</h2>
@@ -216,38 +216,61 @@
   }, 3000);
 
   document.getElementById('btn-activate').addEventListener('click', () => {
-    showScreen('screen-activation');
+    showScreen('activationScreen');
   });
 
   // Activation
-  document.getElementById('btn-verify').addEventListener('click', () => {
-    const code = document.getElementById('secret-code').value;
-    const msg = document.getElementById('auth-msg');
-    if(code === 'V800') {
+  function showHistoriqueScreen() {
+    document.getElementById("activationScreen").style.display = "none";
+    document.getElementById("screen-loading").style.display = "none";
+    document.getElementById("historiqueScreen").style.display = "block";
+  }
+
+  const codeInput = document.getElementById("secretCode");
+
+  function verifyCode() {
+    const code = codeInput.value.trim();
+    const msg = document.getElementById("accessMessage");
+
+    if(code === "V800") {
       msg.style.color = 'var(--secondary)';
-      msg.innerText = 'ACCESS GRANTED';
+      msg.innerText = "ACCESS GRANTED";
+      document.getElementById("loadingText").innerText = "LOADING VIRTUAL ANALYSIS ENGINE...";
+
       setTimeout(() => {
-        showScreen('screen-loading');
-        setTimeout(() => {
-          showScreen('screen-main');
-          document.getElementById('screen-main').style.display = 'block';
+        document.getElementById("activationScreen").style.display = "none";
+        document.getElementById("screen-loading").style.display = "flex";
+        
+        setTimeout(function() {
+          showHistoriqueScreen();
         }, 5000);
       }, 1000);
     } else {
       msg.style.color = 'var(--primary)';
-      msg.innerText = 'ACCESS DENIED';
+      msg.innerText = "INVALID CODE";
     }
-  });
+  }
+
+  document.getElementById('btn-verify').addEventListener('click', verifyCode);
+
+  const normalizeText = (text) => {
+    return text
+      .replace(/–|—/g, "-")
+      .replace(/[“”]/g, '"')
+      .replace(/[‘’]/g, "'")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  };
 
   // Step 1: Parse History
   document.getElementById('btn-save-history').addEventListener('click', () => {
-    const text = document.getElementById('history-input').value;
-    const lines = text.split('\\n').filter(l => l.trim() !== '');
+    let text = document.getElementById('history-input').value;
+    text = normalizeText(text);
+    const lines = text.split('\n').filter(l => l.trim() !== '');
     historyData = {};
     
     lines.forEach(line => {
       // Regex to match: TeamA 2-1 TeamB or TeamA 2 - 1 TeamB
-      const match = line.match(/(.+?)\\s+(\\d+)\\s*-\\s*(\\d+)\\s+(.+)/);
+      const match = line.match(/(.+?)\s+(\d+)\s*[:-]\s*(\d+)\s+(.+)/);
       if(match) {
         const t1 = match[1].trim().toLowerCase();
         const g1 = parseInt(match[2]);
@@ -278,45 +301,98 @@
   });
 
   // Step 2: Run Analysis
-  document.getElementById('btn-run-analysis').addEventListener('click', () => {
-    const text = document.getElementById('matches-input').value;
-    const lines = text.split('\\n').filter(l => l.trim() !== '');
+  const launchAnalyse = () => {
+    let text = document.getElementById('matches-input').value;
+    text = normalizeText(text);
+    const lines = text.split('\n').filter(l => l.trim() !== '');
     
     let currentMatch = null;
     const matchesToAnalyze = [];
 
-    for(let i=0; i<lines.length; i++) {
-      const line = lines[i];
-      if(line.includes('vs')) {
-        const parts = line.split('vs');
-        currentMatch = { t1: parts[0].trim(), t2: parts[1].trim(), odds: {1:0, x:0, 2:0} };
-        matchesToAnalyze.push(currentMatch);
-      } else if(currentMatch && line.includes('1:')) {
-        const oddsMatch = line.match(/1:\\s*([\\d.]+).*?X:\\s*([\\d.]+).*?2:\\s*([\\d.]+)/i);
-        if(oddsMatch) {
+    try {
+      // 2 Parse the match input
+      // 3 Parse the odds
+      for(let i=0; i<lines.length; i++) {
+        let line = lines[i];
+        
+        // Check if it's an odds line
+        const oddsMatch = line.match(/1\s*[:\-]?\s*([\d.]+).*?X\s*[:\-]?\s*([\d.]+).*?2\s*[:\-]?\s*([\d.]+)/i);
+        if(oddsMatch && currentMatch) {
           currentMatch.odds = { 1: parseFloat(oddsMatch[1]), x: parseFloat(oddsMatch[2]), 2: parseFloat(oddsMatch[3]) };
+        } else {
+          // It might be a match line
+          let parts = line.split(/vs| - | – | — /i);
+          if (parts.length >= 2) {
+            currentMatch = { t1: parts[0].trim(), t2: parts[1].trim(), odds: {1:0, x:0, 2:0} };
+            matchesToAnalyze.push(currentMatch);
+          }
         }
       }
+
+      if(matchesToAnalyze.length === 0) {
+        const btn = document.getElementById('btn-run-analysis');
+        const oldText = btn.innerText;
+        btn.innerText = "FORMAT INVALIDE";
+        btn.style.backgroundColor = "var(--primary)";
+        setTimeout(() => {
+          btn.innerText = oldText;
+          btn.style.backgroundColor = "var(--secondary)";
+        }, 3000);
+        return;
+      }
+    } catch (e) {
+      const btn = document.getElementById('btn-run-analysis');
+      const oldText = btn.innerText;
+      btn.innerText = "ERREUR PARSING";
+      btn.style.backgroundColor = "var(--primary)";
+      setTimeout(() => {
+        btn.innerText = oldText;
+        btn.style.backgroundColor = "var(--secondary)";
+      }, 3000);
+      return;
     }
 
-    if(matchesToAnalyze.length === 0) return alert("Format invalide");
-
-    // Show radar
-    document.getElementById('screen-main').style.display = 'none';
-    document.getElementById('loading-text').innerText = 'ANALYZING DATA...';
+    // 1 Start scanning animation
+    document.getElementById('historiqueScreen').style.display = 'none';
+    document.getElementById('loadingText').innerText = 'ANALYZING DATA...';
     showScreen('screen-loading');
     
     let scanInterval = setInterval(playScanSound, 500);
 
+    // Add a safety timeout so the animation always stops after 3 seconds even if an error occurs.
     setTimeout(() => {
+      // 6 Stop animation
       clearInterval(scanInterval);
-      performAnalysis(matchesToAnalyze);
-      showScreen('screen-main');
-      document.getElementById('screen-main').style.display = 'block';
-      document.getElementById('step2-card').style.display = 'none';
-      document.getElementById('results-container').style.display = 'block';
+      
+      try {
+        // 4 Run probability calculations
+        performAnalysis(matchesToAnalyze);
+        
+        // 7 Display results
+        showScreen('historiqueScreen');
+        document.getElementById('historiqueScreen').style.display = 'block';
+        document.getElementById('step2-card').style.display = 'none';
+        document.getElementById('results-container').style.display = 'block';
+        
+        // Ensure the function launchAnalyse() always ends by calling renderResults().
+        renderResults();
+      } catch (e) {
+        console.error(e);
+        const btn = document.getElementById('btn-run-analysis');
+        const oldText = btn.innerText;
+        btn.innerText = "ERREUR ANALYSE";
+        btn.style.backgroundColor = "var(--primary)";
+        setTimeout(() => {
+          btn.innerText = oldText;
+          btn.style.backgroundColor = "var(--secondary)";
+        }, 3000);
+        showScreen('historiqueScreen');
+        document.getElementById('historiqueScreen').style.display = 'block';
+      }
     }, 3000);
-  });
+  };
+
+  document.getElementById('btn-run-analysis').addEventListener('click', launchAnalyse);
 
   const getStats = (teamName) => {
     const t = teamName.toLowerCase();
@@ -333,15 +409,8 @@
       const avgGf2 = s2.gf / (s2.matches||1);
       const avgGa2 = s2.ga / (s2.matches||1);
 
-      const expG1 = (avgGf1 + avgGa2) / 2;
-      const expG2 = (avgGf2 + avgGa1) / 2;
-      const totalExpG = expG1 + expG2;
-
-      // Poisson approx simplified
-      let p1 = 0, px = 0, p2 = 0;
-      if(expG1 > expG2 + 0.5) { p1 = 0.6; px = 0.25; p2 = 0.15; }
-      else if(expG2 > expG1 + 0.5) { p1 = 0.15; px = 0.25; p2 = 0.6; }
-      else { p1 = 0.35; px = 0.35; p2 = 0.3; }
+      const histExpG1 = (avgGf1 + avgGa2) / 2;
+      const histExpG2 = (avgGf2 + avgGa1) / 2;
 
       // Adjust with odds implied probability
       const o1 = m.odds[1] ? (1/m.odds[1]) : 0.33;
@@ -349,32 +418,74 @@
       const o2 = m.odds[2] ? (1/m.odds[2]) : 0.33;
       const sumO = o1+ox+o2;
       
-      const finalP1 = (p1 + (o1/sumO)) / 2;
-      const finalPx = (px + (ox/sumO)) / 2;
-      const finalP2 = (p2 + (o2/sumO)) / 2;
+      const prob1 = o1/sumO;
+      const probX = ox/sumO;
+      const prob2 = o2/sumO;
 
-      let pred1x2 = '1'; let maxP = finalP1;
-      if(finalPx > maxP) { pred1x2 = 'X'; maxP = finalPx; }
-      if(finalP2 > maxP) { pred1x2 = '2'; maxP = finalP2; }
+      // Blend historical expG with odds-implied expG
+      // Assume average match has 2.5 goals
+      const oddsExpG1 = prob1 * 2.5;
+      const oddsExpG2 = prob2 * 2.5;
+
+      // Final expected goals
+      const expG1 = (histExpG1 + oddsExpG1) / 2;
+      const expG2 = (histExpG2 + oddsExpG2) / 2;
+      const totalExpG = expG1 + expG2;
+
+      // Poisson distribution function
+      const poisson = (k, lambda) => {
+        let p = Math.exp(-lambda);
+        for(let i=1; i<=k; i++) p *= lambda / i;
+        return p;
+      };
+
+      // Calculate probabilities for scores 0-0 to 6-6
+      let bestScore = "0-0";
+      let maxScoreProb = 0;
+      let p1 = 0, px = 0, p2 = 0;
+
+      for(let i=0; i<=6; i++) {
+        for(let j=0; j<=6; j++) {
+          const prob = poisson(i, expG1) * poisson(j, expG2);
+          
+          if(i > j) p1 += prob;
+          else if(i === j) px += prob;
+          else p2 += prob;
+
+          if(prob > maxScoreProb) {
+            maxScoreProb = prob;
+            bestScore = `${i}-${j}`;
+          }
+        }
+      }
+
+      let pred1x2 = '1'; let maxP = p1;
+      if(px > maxP) { pred1x2 = 'X'; maxP = px; }
+      if(p2 > maxP) { pred1x2 = '2'; maxP = p2; }
 
       let dc = '';
-      if(pred1x2 === '1') dc = finalPx > finalP2 ? '1X' : '12';
-      if(pred1x2 === 'X') dc = finalP1 > finalP2 ? '1X' : 'X2';
-      if(pred1x2 === '2') dc = finalPx > finalP1 ? 'X2' : '12';
+      if(pred1x2 === '1') dc = px > p2 ? '1X' : '12';
+      if(pred1x2 === 'X') dc = p1 > p2 ? '1X' : 'X2';
+      if(pred1x2 === '2') dc = px > p1 ? 'X2' : '12';
 
       const confidence = Math.min(99, Math.round(maxP * 100 + 15)); // Boosted for UI
       
-      const exactScore = \`\${Math.round(expG1)}-\${Math.round(expG2)}\`;
-      const htScore = \`\${Math.floor(expG1/2)}-\${Math.floor(expG2/2)}\`;
+      const exactScore = bestScore;
+      const [g1, g2] = bestScore.split('-').map(Number);
+      const htScore = `${Math.floor(g1/2)}-${Math.floor(g2/2)}`;
+      
+      const [ht1, ht2] = htScore.split('-').map(Number);
+      const [ft1, ft2] = exactScore.split('-').map(Number);
+      let htRes = ht1 > ht2 ? '1' : (ht1 < ht2 ? '2' : 'X');
+      let ftRes = ft1 > ft2 ? '1' : (ft1 < ft2 ? '2' : 'X');
+      const htft = `${htRes}/${ftRes}`;
       
       return {
         ...m,
-        pred1x2, dc, confidence, exactScore, htScore, totalExpG,
+        pred1x2, dc, confidence, exactScore, htScore, totalExpG, htft,
         oddsVal: m.odds[pred1x2.toLowerCase()] || 1.5
       };
     });
-
-    renderResults();
   };
 
   const renderResults = () => {
@@ -386,37 +497,37 @@
     analysisResults.forEach((res, index) => {
       const card = document.createElement('div');
       card.className = 'card match-card';
-      card.style.animationDelay = \`\${index * 0.1}s\`;
+      card.style.animationDelay = `${index * 0.1}s`;
       
-      card.innerHTML = \`
+      card.innerHTML = `
         <div class="match-header">
-          <span>\${res.t1} vs \${res.t2}</span>
-          <span class="prediction-badge">\${res.dc}</span>
+          <span>${res.t1} vs ${res.t2}</span>
+          <span class="prediction-badge">${res.dc}</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span class="confidence">Confidence: \${res.confidence}%</span>
-          <span style="font-size:0.9rem; color:var(--text-muted);">Score estimé: \${res.exactScore}</span>
+          <span class="confidence">Confidence: ${res.confidence}%</span>
+          <span style="font-size:0.9rem; color:var(--text-muted);">Score estimé: ${res.exactScore}</span>
         </div>
         <div class="odds-row">
-          <span>1: \${res.odds[1]||'-'}</span>
-          <span>X: \${res.odds.x||'-'}</span>
-          <span>2: \${res.odds[2]||'-'}</span>
+          <span>1: ${res.odds[1]||'-'}</span>
+          <span>X: ${res.odds.x||'-'}</span>
+          <span>2: ${res.odds[2]||'-'}</span>
         </div>
-        <button onclick="toggleDetails(\${index})" style="background:rgba(255,255,255,0.1); box-shadow:none;">VOIR DÉTAILS</button>
+        <button onclick="toggleDetails(${index})" style="background:rgba(255,255,255,0.1); box-shadow:none;">VOIR DÉTAILS</button>
         
-        <div class="details-panel" id="details-\${index}">
+        <div class="details-panel" id="details-${index}">
           <div class="detail-grid">
-            <div class="detail-item"><div class="detail-label">1X2</div><div class="detail-value">\${res.pred1x2}</div></div>
-            <div class="detail-item"><div class="detail-label">Double Chance</div><div class="detail-value">\${res.dc}</div></div>
-            <div class="detail-item"><div class="detail-label">Score Exact</div><div class="detail-value">\${res.exactScore}</div></div>
-            <div class="detail-item"><div class="detail-label">Mi-Temps</div><div class="detail-value">\${res.htScore}</div></div>
-            <div class="detail-item"><div class="detail-label">Over 1.5</div><div class="detail-value">\${res.totalExpG > 1.5 ? 'OUI' : 'NON'}</div></div>
-            <div class="detail-item"><div class="detail-label">Over 2.5</div><div class="detail-value">\${res.totalExpG > 2.5 ? 'OUI' : 'NON'}</div></div>
-            <div class="detail-item"><div class="detail-label">GG / NG</div><div class="detail-value">\${(res.totalExpG > 2 && res.exactScore !== '2-0' && res.exactScore !== '0-2') ? 'GG' : 'NG'}</div></div>
-            <div class="detail-item"><div class="detail-label">Total Buts</div><div class="detail-value">\${Math.round(res.totalExpG)}</div></div>
+            <div class="detail-item"><div class="detail-label">1X2</div><div class="detail-value">${res.pred1x2}</div></div>
+            <div class="detail-item"><div class="detail-label">Double Chance</div><div class="detail-value">${res.dc}</div></div>
+            <div class="detail-item"><div class="detail-label">Score Exact</div><div class="detail-value">${res.exactScore}</div></div>
+            <div class="detail-item"><div class="detail-label">Mi-Temps</div><div class="detail-value">${res.htScore}</div></div>
+            <div class="detail-item"><div class="detail-label">Over 1.5</div><div class="detail-value">${res.totalExpG > 1.5 ? 'OUI' : 'NON'}</div></div>
+            <div class="detail-item"><div class="detail-label">Over 2.5</div><div class="detail-value">${res.totalExpG > 2.5 ? 'OUI' : 'NON'}</div></div>
+            <div class="detail-item"><div class="detail-label">GG / NG</div><div class="detail-value">${(res.totalExpG > 2 && res.exactScore !== '2-0' && res.exactScore !== '0-2') ? 'GG' : 'NG'}</div></div>
+            <div class="detail-item"><div class="detail-label">HT/FT</div><div class="detail-value">${res.htft}</div></div>
           </div>
         </div>
-      \`;
+      `;
       container.appendChild(card);
     });
 
@@ -425,7 +536,7 @@
   };
 
   window.toggleDetails = (index) => {
-    const panel = document.getElementById(\`details-\${index}\`);
+    const panel = document.getElementById(`details-${index}`);
     panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
   };
 
@@ -456,16 +567,16 @@
       
       const card = document.createElement('div');
       card.className = 'card';
-      let picksHtml = picks.map(p => \`<div style="font-size:0.9rem; margin:5px 0;">• \${p.t1} vs \${p.t2} <b>(\${p.dc})</b></div>\`).join('');
+      let picksHtml = picks.map(p => `<div style="font-size:0.9rem; margin:5px 0;">• ${p.t1} vs ${p.t2} <b>(${p.dc})</b></div>`).join('');
       
-      card.innerHTML = \`
-        <h3 style="text-align:left; color:var(--secondary);">MULTIPLE #\${i}</h3>
-        \${picksHtml}
+      card.innerHTML = `
+        <h3 style="text-align:left; color:var(--secondary);">MULTIPLE #${i}</h3>
+        ${picksHtml}
         <div style="margin-top:15px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between;">
-          <span>Cote Totale: <b>\${totalOdds.toFixed(2)}</b></span>
-          <span style="color:var(--secondary);">Stabilité: \${avgConf}%</span>
+          <span>Cote Totale: <b>${totalOdds.toFixed(2)}</b></span>
+          <span style="color:var(--secondary);">Stabilité: ${avgConf}%</span>
         </div>
-      \`;
+      `;
       container.appendChild(card);
     }
   };
@@ -474,36 +585,34 @@
     const container = document.getElementById('high-odds');
     container.innerHTML = '';
     
-    // Find combination > 10
-    let picks = [];
-    let totalOdds = 1;
+    let highOddsMatches = [];
     
     for(let m of analysisResults) {
-      picks.push(m);
-      totalOdds *= (m.oddsVal || 1.5);
-      if(totalOdds > 10) break;
+      if(m.odds[1] > 10 && m.odds[1] < 100) highOddsMatches.push({match: m, team: m.t1, odd: m.odds[1], type: '1'});
+      if(m.odds.x > 10 && m.odds.x < 100) highOddsMatches.push({match: m, team: 'Nul', odd: m.odds.x, type: 'X'});
+      if(m.odds[2] > 10 && m.odds[2] < 100) highOddsMatches.push({match: m, team: m.t2, odd: m.odds[2], type: '2'});
     }
 
-    if(totalOdds > 1) {
-      let riskClass = 'risk-green';
-      let riskText = 'SAFE';
-      if(totalOdds > 20) { riskClass = 'risk-orange'; riskText = 'MEDIUM'; }
-      if(totalOdds > 50) { riskClass = 'risk-red'; riskText = 'HIGH RISK'; }
-
-      const card = document.createElement('div');
-      card.className = 'card';
-      let picksHtml = picks.map(p => \`<div style="font-size:0.9rem; margin:5px 0;">• \${p.t1} vs \${p.t2} <b>(\${p.pred1x2})</b></div>\`).join('');
-      
-      card.innerHTML = \`
-        \${picksHtml}
-        <div style="margin-top:15px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:1.2rem;">Cote: <b>\${totalOdds.toFixed(2)}</b></span>
-          <span class="\${riskClass}" style="font-weight:bold; border:1px solid currentColor; padding:4px 10px; border-radius:4px;">\${riskText}</span>
-        </div>
-      \`;
-      container.appendChild(card);
+    if(highOddsMatches.length > 0) {
+      highOddsMatches.forEach(item => {
+        let riskClass = 'risk-red';
+        let riskText = 'RISQUÉ';
+        if(item.odd < 20) { riskClass = 'risk-orange'; riskText = 'MODÉRÉ'; }
+        
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div style="font-size:1rem; margin-bottom:10px;">• ${item.match.t1} vs ${item.match.t2}</div>
+          <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:10px;">Sélection: <b>${item.team} (${item.type})</b></div>
+          <div style="padding-top:10px; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:1.2rem;">Cote: <b>${item.odd.toFixed(2)}</b></span>
+            <span class="${riskClass}" style="font-weight:bold; border:1px solid currentColor; padding:4px 10px; border-radius:4px;">${riskText}</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
     } else {
-      container.innerHTML = '<p style="color:var(--text-muted);">Pas assez de matchs pour une cote > 10.</p>';
+      container.innerHTML = '<p style="color:var(--text-muted);">Aucune cote > 10 détectée dans les matchs.</p>';
     }
   };
 </script>
