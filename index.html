@@ -242,12 +242,12 @@
   // Step 1: Parse History
   document.getElementById('btn-save-history').addEventListener('click', () => {
     const text = document.getElementById('history-input').value;
-    const lines = text.split('\n').filter(l => l.trim() !== '');
+    const lines = text.split('\\n').filter(l => l.trim() !== '');
     historyData = {};
     
     lines.forEach(line => {
       // Regex to match: TeamA 2-1 TeamB or TeamA 2 - 1 TeamB
-      const match = line.match(/(.+?)\s+(\d+)\s*-\s*(\d+)\s+(.+)/);
+      const match = line.match(/(.+?)\\s+(\\d+)\\s*-\\s*(\\d+)\\s+(.+)/);
       if(match) {
         const t1 = match[1].trim().toLowerCase();
         const g1 = parseInt(match[2]);
@@ -280,7 +280,7 @@
   // Step 2: Run Analysis
   document.getElementById('btn-run-analysis').addEventListener('click', () => {
     const text = document.getElementById('matches-input').value;
-    const lines = text.split('\n').filter(l => l.trim() !== '');
+    const lines = text.split('\\n').filter(l => l.trim() !== '');
     
     let currentMatch = null;
     const matchesToAnalyze = [];
@@ -292,7 +292,7 @@
         currentMatch = { t1: parts[0].trim(), t2: parts[1].trim(), odds: {1:0, x:0, 2:0} };
         matchesToAnalyze.push(currentMatch);
       } else if(currentMatch && line.includes('1:')) {
-        const oddsMatch = line.match(/1:\s*([\d.]+).*?X:\s*([\d.]+).*?2:\s*([\d.]+)/i);
+        const oddsMatch = line.match(/1:\\s*([\\d.]+).*?X:\\s*([\\d.]+).*?2:\\s*([\\d.]+)/i);
         if(oddsMatch) {
           currentMatch.odds = { 1: parseFloat(oddsMatch[1]), x: parseFloat(oddsMatch[2]), 2: parseFloat(oddsMatch[3]) };
         }
@@ -364,8 +364,8 @@
 
       const confidence = Math.min(99, Math.round(maxP * 100 + 15)); // Boosted for UI
       
-      const exactScore = `${Math.round(expG1)}-${Math.round(expG2)}`;
-      const htScore = `${Math.floor(expG1/2)}-${Math.floor(expG2/2)}`;
+      const exactScore = \`\${Math.round(expG1)}-\${Math.round(expG2)}\`;
+      const htScore = \`\${Math.floor(expG1/2)}-\${Math.floor(expG2/2)}\`;
       
       return {
         ...m,
@@ -386,37 +386,37 @@
     analysisResults.forEach((res, index) => {
       const card = document.createElement('div');
       card.className = 'card match-card';
-      card.style.animationDelay = `${index * 0.1}s`;
+      card.style.animationDelay = \`\${index * 0.1}s\`;
       
-      card.innerHTML = `
+      card.innerHTML = \`
         <div class="match-header">
-          <span>${res.t1} vs ${res.t2}</span>
-          <span class="prediction-badge">${res.dc}</span>
+          <span>\${res.t1} vs \${res.t2}</span>
+          <span class="prediction-badge">\${res.dc}</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span class="confidence">Confidence: ${res.confidence}%</span>
-          <span style="font-size:0.9rem; color:var(--text-muted);">Score estimé: ${res.exactScore}</span>
+          <span class="confidence">Confidence: \${res.confidence}%</span>
+          <span style="font-size:0.9rem; color:var(--text-muted);">Score estimé: \${res.exactScore}</span>
         </div>
         <div class="odds-row">
-          <span>1: ${res.odds[1]||'-'}</span>
-          <span>X: ${res.odds.x||'-'}</span>
-          <span>2: ${res.odds[2]||'-'}</span>
+          <span>1: \${res.odds[1]||'-'}</span>
+          <span>X: \${res.odds.x||'-'}</span>
+          <span>2: \${res.odds[2]||'-'}</span>
         </div>
-        <button onclick="toggleDetails(${index})" style="background:rgba(255,255,255,0.1); box-shadow:none;">VOIR DÉTAILS</button>
+        <button onclick="toggleDetails(\${index})" style="background:rgba(255,255,255,0.1); box-shadow:none;">VOIR DÉTAILS</button>
         
-        <div class="details-panel" id="details-${index}">
+        <div class="details-panel" id="details-\${index}">
           <div class="detail-grid">
-            <div class="detail-item"><div class="detail-label">1X2</div><div class="detail-value">${res.pred1x2}</div></div>
-            <div class="detail-item"><div class="detail-label">Double Chance</div><div class="detail-value">${res.dc}</div></div>
-            <div class="detail-item"><div class="detail-label">Score Exact</div><div class="detail-value">${res.exactScore}</div></div>
-            <div class="detail-item"><div class="detail-label">Mi-Temps</div><div class="detail-value">${res.htScore}</div></div>
-            <div class="detail-item"><div class="detail-label">Over 1.5</div><div class="detail-value">${res.totalExpG > 1.5 ? 'OUI' : 'NON'}</div></div>
-            <div class="detail-item"><div class="detail-label">Over 2.5</div><div class="detail-value">${res.totalExpG > 2.5 ? 'OUI' : 'NON'}</div></div>
-            <div class="detail-item"><div class="detail-label">GG / NG</div><div class="detail-value">${(res.totalExpG > 2 && res.exactScore !== '2-0' && res.exactScore !== '0-2') ? 'GG' : 'NG'}</div></div>
-            <div class="detail-item"><div class="detail-label">Total Buts</div><div class="detail-value">${Math.round(res.totalExpG)}</div></div>
+            <div class="detail-item"><div class="detail-label">1X2</div><div class="detail-value">\${res.pred1x2}</div></div>
+            <div class="detail-item"><div class="detail-label">Double Chance</div><div class="detail-value">\${res.dc}</div></div>
+            <div class="detail-item"><div class="detail-label">Score Exact</div><div class="detail-value">\${res.exactScore}</div></div>
+            <div class="detail-item"><div class="detail-label">Mi-Temps</div><div class="detail-value">\${res.htScore}</div></div>
+            <div class="detail-item"><div class="detail-label">Over 1.5</div><div class="detail-value">\${res.totalExpG > 1.5 ? 'OUI' : 'NON'}</div></div>
+            <div class="detail-item"><div class="detail-label">Over 2.5</div><div class="detail-value">\${res.totalExpG > 2.5 ? 'OUI' : 'NON'}</div></div>
+            <div class="detail-item"><div class="detail-label">GG / NG</div><div class="detail-value">\${(res.totalExpG > 2 && res.exactScore !== '2-0' && res.exactScore !== '0-2') ? 'GG' : 'NG'}</div></div>
+            <div class="detail-item"><div class="detail-label">Total Buts</div><div class="detail-value">\${Math.round(res.totalExpG)}</div></div>
           </div>
         </div>
-      `;
+      \`;
       container.appendChild(card);
     });
 
@@ -425,7 +425,7 @@
   };
 
   window.toggleDetails = (index) => {
-    const panel = document.getElementById(`details-${index}`);
+    const panel = document.getElementById(\`details-\${index}\`);
     panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
   };
 
@@ -456,16 +456,16 @@
       
       const card = document.createElement('div');
       card.className = 'card';
-      let picksHtml = picks.map(p => `<div style="font-size:0.9rem; margin:5px 0;">• ${p.t1} vs ${p.t2} <b>(${p.dc})</b></div>`).join('');
+      let picksHtml = picks.map(p => \`<div style="font-size:0.9rem; margin:5px 0;">• \${p.t1} vs \${p.t2} <b>(\${p.dc})</b></div>\`).join('');
       
-      card.innerHTML = `
-        <h3 style="text-align:left; color:var(--secondary);">MULTIPLE #${i}</h3>
-        ${picksHtml}
+      card.innerHTML = \`
+        <h3 style="text-align:left; color:var(--secondary);">MULTIPLE #\${i}</h3>
+        \${picksHtml}
         <div style="margin-top:15px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between;">
-          <span>Cote Totale: <b>${totalOdds.toFixed(2)}</b></span>
-          <span style="color:var(--secondary);">Stabilité: ${avgConf}%</span>
+          <span>Cote Totale: <b>\${totalOdds.toFixed(2)}</b></span>
+          <span style="color:var(--secondary);">Stabilité: \${avgConf}%</span>
         </div>
-      `;
+      \`;
       container.appendChild(card);
     }
   };
@@ -492,15 +492,15 @@
 
       const card = document.createElement('div');
       card.className = 'card';
-      let picksHtml = picks.map(p => `<div style="font-size:0.9rem; margin:5px 0;">• ${p.t1} vs ${p.t2} <b>(${p.pred1x2})</b></div>`).join('');
+      let picksHtml = picks.map(p => \`<div style="font-size:0.9rem; margin:5px 0;">• \${p.t1} vs \${p.t2} <b>(\${p.pred1x2})</b></div>\`).join('');
       
-      card.innerHTML = `
-        ${picksHtml}
+      card.innerHTML = \`
+        \${picksHtml}
         <div style="margin-top:15px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:1.2rem;">Cote: <b>${totalOdds.toFixed(2)}</b></span>
-          <span class="${riskClass}" style="font-weight:bold; border:1px solid currentColor; padding:4px 10px; border-radius:4px;">${riskText}</span>
+          <span style="font-size:1.2rem;">Cote: <b>\${totalOdds.toFixed(2)}</b></span>
+          <span class="\${riskClass}" style="font-weight:bold; border:1px solid currentColor; padding:4px 10px; border-radius:4px;">\${riskText}</span>
         </div>
-      `;
+      \`;
       container.appendChild(card);
     } else {
       container.innerHTML = '<p style="color:var(--text-muted);">Pas assez de matchs pour une cote > 10.</p>';
