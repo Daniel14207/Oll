@@ -302,6 +302,11 @@
 
   // Step 2: Run Analysis
   const launchAnalyse = () => {
+    const btn = document.getElementById('btn-run-analysis');
+    const oldText = btn.innerText;
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+
     let text = document.getElementById('matches-input').value;
     text = normalizeText(text);
     const lines = text.split('\n').filter(l => l.trim() !== '');
@@ -330,24 +335,24 @@
       }
 
       if(matchesToAnalyze.length === 0) {
-        const btn = document.getElementById('btn-run-analysis');
-        const oldText = btn.innerText;
         btn.innerText = "FORMAT INVALIDE";
         btn.style.backgroundColor = "var(--primary)";
         setTimeout(() => {
           btn.innerText = oldText;
           btn.style.backgroundColor = "var(--secondary)";
+          btn.disabled = false;
+          btn.style.opacity = '1';
         }, 3000);
         return;
       }
     } catch (e) {
-      const btn = document.getElementById('btn-run-analysis');
-      const oldText = btn.innerText;
       btn.innerText = "ERREUR PARSING";
       btn.style.backgroundColor = "var(--primary)";
       setTimeout(() => {
         btn.innerText = oldText;
         btn.style.backgroundColor = "var(--secondary)";
+        btn.disabled = false;
+        btn.style.opacity = '1';
       }, 3000);
       return;
     }
@@ -376,15 +381,17 @@
         
         // Ensure the function launchAnalyse() always ends by calling renderResults().
         renderResults();
+        btn.disabled = false;
+        btn.style.opacity = '1';
       } catch (e) {
         console.error(e);
-        const btn = document.getElementById('btn-run-analysis');
-        const oldText = btn.innerText;
         btn.innerText = "ERREUR ANALYSE";
         btn.style.backgroundColor = "var(--primary)";
         setTimeout(() => {
           btn.innerText = oldText;
           btn.style.backgroundColor = "var(--secondary)";
+          btn.disabled = false;
+          btn.style.opacity = '1';
         }, 3000);
         showScreen('historiqueScreen');
         document.getElementById('historiqueScreen').style.display = 'block';
@@ -480,9 +487,16 @@
       let ftRes = ft1 > ft2 ? '1' : (ft1 < ft2 ? '2' : 'X');
       const htft = `${htRes}/${ftRes}`;
       
+      let htDc = '';
+      if(htRes === '1') htDc = '1X';
+      if(htRes === 'X') htDc = '1X / X2';
+      if(htRes === '2') htDc = 'X2';
+
+      const totalGoals = ft1 + ft2;
+      
       return {
         ...m,
-        pred1x2, dc, confidence, exactScore, htScore, totalExpG, htft,
+        pred1x2, dc, confidence, exactScore, htScore, totalExpG, htft, htRes, htDc, totalGoals,
         oddsVal: m.odds[pred1x2.toLowerCase()] || 1.5
       };
     });
@@ -519,10 +533,14 @@
           <div class="detail-grid">
             <div class="detail-item"><div class="detail-label">1X2</div><div class="detail-value">${res.pred1x2}</div></div>
             <div class="detail-item"><div class="detail-label">Double Chance</div><div class="detail-value">${res.dc}</div></div>
+            <div class="detail-item"><div class="detail-label">Mi-Temps 1X2</div><div class="detail-value">${res.htRes}</div></div>
+            <div class="detail-item"><div class="detail-label">MT Double Chance</div><div class="detail-value">${res.htDc}</div></div>
             <div class="detail-item"><div class="detail-label">Score Exact</div><div class="detail-value">${res.exactScore}</div></div>
-            <div class="detail-item"><div class="detail-label">Mi-Temps</div><div class="detail-value">${res.htScore}</div></div>
+            <div class="detail-item"><div class="detail-label">Total Buts</div><div class="detail-value">${res.totalGoals}</div></div>
+            <div class="detail-item"><div class="detail-label">Over 0.5</div><div class="detail-value">${res.totalExpG > 0.5 ? 'OUI' : 'NON'}</div></div>
             <div class="detail-item"><div class="detail-label">Over 1.5</div><div class="detail-value">${res.totalExpG > 1.5 ? 'OUI' : 'NON'}</div></div>
             <div class="detail-item"><div class="detail-label">Over 2.5</div><div class="detail-value">${res.totalExpG > 2.5 ? 'OUI' : 'NON'}</div></div>
+            <div class="detail-item"><div class="detail-label">Over 3.5</div><div class="detail-value">${res.totalExpG > 3.5 ? 'OUI' : 'NON'}</div></div>
             <div class="detail-item"><div class="detail-label">GG / NG</div><div class="detail-value">${(res.totalExpG > 2 && res.exactScore !== '2-0' && res.exactScore !== '0-2') ? 'GG' : 'NG'}</div></div>
             <div class="detail-item"><div class="detail-label">HT/FT</div><div class="detail-value">${res.htft}</div></div>
           </div>
